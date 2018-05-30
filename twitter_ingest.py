@@ -8,7 +8,6 @@ import sys
 import os
 
 def setup_credentials():  
-  
   try: 
    credentials = {
       'consumer_key' : os.environ['TWITTER_CONSUMER_KEY'],
@@ -20,25 +19,26 @@ def setup_credentials():
     sys.stderr.write('Environment variable is not set. Please set with: export %s="your-value"' %e.message)
     sys.exit(1)
   return credentials
-
-
-def main():
+   
+def main(hashtag):
   creds = setup_credentials()
   auth = OAuthHandler(creds['consumer_key'], creds['consumer_secret'])
   auth.set_access_token(creds['access_token'], creds['access_secret'])
-  twitter_stream = Stream(auth, MyListener())
-  twitter_stream.filter(track=['#trump'])
+  filepath = '%s-tweets.json' %hashtag
+  twitter_stream = Stream(auth, MyListener(filepath))
+  twitter_stream.filter(track=['#%s'%hashtag])
 
 class MyListener(StreamListener):
 
-    def __init__(self):
-      self.filepath = 'trump.json'
+    def __init__(self, filepath):
+      self.filepath = filepath 
  
     def on_data(self, data):
         try:
-            with open(self.filepath, 'a') as f:
-                f.write(data)
-                return True
+          with open(self.filepath, 'a') as f:
+            f.write(data)
+          return True
+
         except BaseException as e:
             print("Error on_data: %s" % str(e))
         return True
@@ -47,6 +47,11 @@ class MyListener(StreamListener):
         print(status)
         return True
 
-
 if __name__ == '__main__':
-  main()
+  try:
+    hashtag = sys.argv[1] 
+    main(hashtag)
+
+  except IndexError:
+    print 'usage: %s hashtag' %sys.argv[0]
+    sys.exit(1)
