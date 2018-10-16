@@ -6,6 +6,7 @@ from tweepy import Stream
 from tweepy.streaming import StreamListener
 import sys
 import os
+import yaml
 
 def setup_credentials():  
   try: 
@@ -19,8 +20,16 @@ def setup_credentials():
     sys.stderr.write('Environment variable is not set. Please set with: export %s="your-value"' %e.message)
     sys.exit(1)
   return credentials
-   
+  
+def read_config_file():
+  with open('config.yml', 'r') as fp:
+    yaml_string = fp.read()
+    config = yaml.load(yaml_string)
+  return config
+
 def main(hashtag):
+  # config_file = 'config.yml'
+  # config = read_config_file(config_file)
   creds = setup_credentials()
   auth = OAuthHandler(creds['consumer_key'], creds['consumer_secret'])
   auth.set_access_token(creds['access_token'], creds['access_secret'])
