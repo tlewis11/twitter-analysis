@@ -7,6 +7,8 @@ from tweepy.streaming import StreamListener
 import sys
 import os
 import yaml
+import boto3
+import json
 
 def setup_credentials():  
   try: 
@@ -37,19 +39,39 @@ def main(hashtag):
   twitter_stream = Stream(auth, MyListener(filepath))
   twitter_stream.filter(track=['#%s'%hashtag])
 
+class TweetBuffer(object):
+    def __init__(self):
+        self.tweets = []
+        self.max_tweets = 100
+
+    def add_tweet(tweet_json):
+        self.tweets.append(tweet_json)
+        if len(self.tweets) >= 10:
+            self.flush()
+
+    def flush(self):
+        s3_client = boto3.client('s3') 
+        tweets = bytes(json.dumps(self.tweets), encoding="ascii")
+        bucket_name = 'sarabi-twitter'
+        key_name = 'tweets-%s' %dtetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        s3_client.put_object(Body=tweets, Bucket=bucket_name, Key=key_name)
+        
+   
 class MyListener(StreamListener):
 
-    def __init__(self, filepath):
-      self.filepath = filepath 
+    def __init__(self, filepath, tweet_buffer):
+        self.filepath = filepath 
+        self.tweet_buffer(tweet_buffer)
  
     def on_data(self, data):
+       
         try:
-          with open(self.filepath, 'a') as f:
-            f.write(data)
-          return True
+            self.tweet_buffer.add_tweet(data)
+            return True
 
         except BaseException as e:
             print("Error on_data: %s" % str(e))
+
         return True
  
     def on_error(self, status):
